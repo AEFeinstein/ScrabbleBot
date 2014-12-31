@@ -2,6 +2,7 @@ package com.gelakinetic.scrabblebot;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 
@@ -261,6 +262,69 @@ public class ScrabbleBot {
 			}
 		}
 
+		/* For each word on the board, search for prefixes and suffixes */
+		String word;
+		int prefixSpace, suffixSpace;
+		
+		//TODO prefix, suffix search
+		/* Sweep across all columns */
+		for(int x = 0; x < 15; x++) {
+			/* Start a blank word */
+			word = "";
+			prefixSpace = 0;
+			suffixSpace = 0;
+			for(int y = 0; y < 15; y++) {
+				if(!scrabbleBoard[x][y].isEmpty()) {
+					word += scrabbleBoard[x][y].getLetter();
+				}
+				if (scrabbleBoard[x][y].isEmpty() || y == 14) {
+					if(word.isEmpty()) {
+						prefixSpace++;
+					}
+					else {
+						if(word.length() > 1) {
+							suffixSpace = 0;
+							while((y+suffixSpace) < 15 && scrabbleBoard[x][(y+suffixSpace)].isEmpty()) {
+								suffixSpace++;
+							}
+							plays.addAll(checkPrefixSuffix(word, prefixSpace, suffixSpace, rackAL));
+						}
+						word = "";
+						prefixSpace = 1;
+					}					
+				}
+			}
+		}
+		
+		/* Sweep across all rows */
+		for(int y = 0; y < 15; y++) {
+			/* Start a blank word */
+			word = "";
+			prefixSpace = 0;
+			suffixSpace = 0;
+			for(int x = 0; x < 15; x++) {
+				if(!scrabbleBoard[x][y].isEmpty()) {
+					word += scrabbleBoard[x][y].getLetter();
+				}
+				if (scrabbleBoard[x][y].isEmpty() || x == 14) {
+					if(word.isEmpty()) {
+						prefixSpace++;
+					}
+					else {
+						if(word.length() > 1) {
+							suffixSpace = 0;
+							while((x+suffixSpace) < 15 && scrabbleBoard[x+suffixSpace][y].isEmpty()) {
+								suffixSpace++;
+							}
+							plays.addAll(checkPrefixSuffix(word, prefixSpace, suffixSpace, rackAL));
+						}
+						word = "";
+						prefixSpace = 1;
+					}					
+				}
+			}
+		}
+
 		Collections.sort(plays);
 		String allPlays = "";
 		for(ScrabblePlay play : plays) {
@@ -268,6 +332,14 @@ public class ScrabbleBot {
 		}
 		mOutputTextPane.setText(allPlays);
 		mOutputTextPane.setCaretPosition(0);
+	}
+
+	private Collection<? extends ScrabblePlay> checkPrefixSuffix(String word, int prefixSpace,
+			int suffixSpace, ArrayList<Character> rackAL) {
+		// TODO Auto-generated method stub
+		System.out.println(prefixSpace + " " + word + " " + suffixSpace);
+		return new ArrayList<ScrabblePlay>();
+		
 	}
 
 	/**
