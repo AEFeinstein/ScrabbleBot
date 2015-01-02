@@ -2,7 +2,6 @@ package com.gelakinetic.scrabblebot;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 
@@ -97,7 +96,7 @@ public class ScrabbleBot {
 	};
 
 	ScrabbleTrie fTrie;
-	//	ScrabbleTrie rTrie; = new ReverseScrabbleTrie();
+	ScrabbleTrie rTrie;
 
 	/**
 	 * Constructor
@@ -106,7 +105,8 @@ public class ScrabbleBot {
 	public ScrabbleBot() throws IOException {
 		fTrie = new ForwardScrabbleTrie();
 		fTrie.LoadDictionary();
-		//		rTrie.LoadDictionary();		
+		rTrie = new ReverseScrabbleTrie();
+		rTrie.LoadDictionary();		
 	}
 
 	/**
@@ -119,21 +119,34 @@ public class ScrabbleBot {
 	public void findPlays(ScrabbleTile[][] scrabbleBoard, ArrayList<Character> rackAL,
 			JTextPane mOutputTextPane) {
 
-		HashMap<Character, ArrayList<String>> potentialIntersections = new HashMap<Character, ArrayList<String>>(26);
-		HashMap<Character, ArrayList<String>> potentialAddons = new HashMap<Character, ArrayList<String>>(6);
 		ArrayList<ScrabblePlay> plays = new ArrayList<ScrabblePlay>();
 
-		for(int i = 0; i < 26; i++) {
-			char tmp = (char) ('a' + i);
-			/* Add a potential letter */
-			rackAL.add(tmp);
+		findIntersectingWords(scrabbleBoard, rackAL, plays);
+		System.out.println("plays: " + plays.size());
+		findPrefixesAndSuffixes(scrabbleBoard, rackAL, plays);
+		System.out.println("plays: " + plays.size());
+		findAddonWords(scrabbleBoard, rackAL, plays);
+		System.out.println("plays: " + plays.size());
 
-			/* Find words for this potential letter */
-			potentialIntersections.put(tmp, fTrie.findWords(rackAL, tmp));
-
-			/* Remove the potential letter */
-			rackAL.remove(rackAL.size()-1);
+		Collections.sort(plays);
+		String allPlays = "";
+		for(ScrabblePlay play : plays) {
+			allPlays += play + "\n";
 		}
+		mOutputTextPane.setText(allPlays);
+		mOutputTextPane.setCaretPosition(0);
+	}
+
+	/**
+	 * 
+	 * @param scrabbleBoard
+	 * @param rackAL
+	 * @param plays 
+	 * @return
+	 */
+	private void findAddonWords(ScrabbleTile[][] scrabbleBoard, ArrayList<Character> rackAL, ArrayList<ScrabblePlay> plays) {
+
+		HashMap<Character, ArrayList<String>> potentialAddons = new HashMap<Character, ArrayList<String>>(6);
 
 		/* For each tile in the rack */
 		for(int i = 0; i < rackAL.size(); i++) {
@@ -144,53 +157,17 @@ public class ScrabbleBot {
 					char tmpWildcard = (char) ('a' + j);
 					/* Find words for this potential letter */
 					if(!potentialAddons.keySet().contains(tmpWildcard)) {
-						potentialAddons.put(tmpWildcard, fTrie.findWords(rackAL, tmpWildcard));
+						potentialAddons.put(tmpWildcard, fTrie.findWords(null, rackAL, tmpWildcard));
 					}
 				}
 			}
 			else {
 				if(!potentialAddons.keySet().contains(tmp)) {
-					potentialAddons.put(tmp, fTrie.findWords(rackAL, tmp));
+					potentialAddons.put(tmp, fTrie.findWords(null, rackAL, tmp));
 				}
 			}
 		}
-
-		/* For each space on the board, if there is a character there, see if it can be an anchor for an intersecting word */
-		for(int y=0; y < 15; y++) {
-			for(int x = 0; x < 15; x++) {
-				if(!scrabbleBoard[x][y].isEmpty()) {
-					ArrayList<String> choices = potentialIntersections.get(scrabbleBoard[x][y].getLetter());
-
-					/* For each word, see if it requires a wildcard, and replace it if necessary */
-					for(String word : choices) {
-						
-						String wildcardMask = new String(word);
-						
-						ArrayList<Character>rackALcopy = new ArrayList<Character>(rackAL);
-						rackALcopy.add(scrabbleBoard[x][y].getLetter());
-						for(int i = 0; i < word.length(); i++) {
-							if(rackALcopy.contains(word.charAt(i))) {
-								rackALcopy.remove((Character)word.charAt(i));
-							}
-							else {
-								wildcardMask = wildcardMask.substring(0,i)+'*'+wildcardMask.substring(i+1);
-								rackALcopy.remove((Character)'*');
-							}
-						}
-
-						ScrabblePlay sp = scoreWord(scrabbleBoard, word, wildcardMask, x, y,
-								rackAL.size() == 7 && rackALcopy.size() == 0);
-
-						if(sp != null && sp.score > 0) {
-							if(!plays.contains(sp)) {
-								plays.add(sp);
-							}				
-						}
-					}
-				}
-			}
-		}
-
+		
 		/* For each two letter word, see if we can use it to anchor a rack-only anagram */
 		int numOldPlays = plays.size();
 		for(int i = 0; i < numOldPlays; i++) {
@@ -231,46 +208,75 @@ public class ScrabbleBot {
 				/* Check the list of rack-only anagrams against the new letter in the two letter word */
 				ArrayList<String> choices = potentialAddons.get(scrabbleBoardTemp[addonX][addonY].getLetter());
 
-				if(choices == null) {
-					System.out.println(scrabbleBoardTemp[addonX][addonY].getLetter()+"");
-				}
 				/* For each word, see if it requires a wildcard, and replace it if necessary */
-				for(String word : choices) {
-					
-					String wildcardMask = new String(word);
-					
-					ArrayList<Character>rackALcopy = new ArrayList<Character>(rackAL);
-					for(int j = 0; j < word.length(); j++) {
-						if(rackALcopy.contains(word.charAt(j))) {
-							rackALcopy.remove((Character)word.charAt(j));
-						}
-						else {
-							wildcardMask = wildcardMask.substring(0,j)+'*'+wildcardMask.substring(j+1);
-							rackALcopy.remove((Character)'*');
-						}
-					}
+				scoreAllWords(choices, scrabbleBoardTemp, rackAL, plays, addonX, addonY);
+			}
+		}
+	}
 
-					ScrabblePlay newSp = scoreWord(scrabbleBoardTemp, word, wildcardMask, addonX, addonY,
-							rackAL.size() == 7 && rackALcopy.size() == 0);
+	/**
+	 * 
+	 * @param scrabbleBoard
+	 * @param rackAL
+	 * @param plays 
+	 * @return
+	 */
+	private void findIntersectingWords(ScrabbleTile[][] scrabbleBoard, ArrayList<Character> rackAL, ArrayList<ScrabblePlay> plays) {
+		
+		HashMap<Character, ArrayList<String>> potentialIntersections = new HashMap<Character, ArrayList<String>>(26);
+		for(int i = 0; i < 26; i++) {
+			char tmp = (char) ('a' + i);
+			/* Add a potential letter */
+			rackAL.add(tmp);
 
-					if(newSp != null && newSp.score > 0 && newSp.direction != sp.direction) {
-						if(!plays.contains(newSp)) {
-							plays.add(newSp);
-						}
-					}
+			/* Find words for this potential letter */
+			potentialIntersections.put(tmp, fTrie.findWords(null, rackAL, tmp));
+
+			/* Remove the potential letter */
+			rackAL.remove(rackAL.size()-1);
+		}
+		
+		/* For each space on the board, if there is a character there, see if it can be an anchor for an intersecting word */
+		for(int y=0; y < 15; y++) {
+			for(int x = 0; x < 15; x++) {
+				if(!scrabbleBoard[x][y].isEmpty()) {
+					ArrayList<String> choices = potentialIntersections.get(scrabbleBoard[x][y].getLetter());
+					scoreAllWords(choices, scrabbleBoard, rackAL, plays, x, y);
 				}
 			}
 		}
+	}
 
+	private void scoreAllWords(ArrayList<String> choices, ScrabbleTile[][] scrabbleBoard, ArrayList<Character> rackAL, ArrayList<ScrabblePlay> plays, int x, int y) {
+		/* For each word, see if it requires a wildcard, and replace it if necessary */
+		for(String word : choices) {
+			ScrabblePlay sp = scoreWord(scrabbleBoard, rackAL, word, x, y);
+
+			if(sp != null && sp.score > 0) {
+				if(!plays.contains(sp)) {
+					plays.add(sp);
+				}				
+			}
+		}
+	}
+
+	/**
+	 * 
+	 * @param scrabbleBoard
+	 * @param rackAL
+	 * @param plays 
+	 * @return 
+	 * @return
+	 */
+	private void findPrefixesAndSuffixes(ScrabbleTile[][] scrabbleBoard, ArrayList<Character> rackAL, ArrayList<ScrabblePlay> plays) {
+		
 		/* For each word on the board, search for prefixes and suffixes */
-		String word;
 		int prefixSpace, suffixSpace;
 		
-		//TODO prefix, suffix search
 		/* Sweep across all columns */
 		for(int x = 0; x < 15; x++) {
 			/* Start a blank word */
-			word = "";
+			String word = "";
 			prefixSpace = 0;
 			suffixSpace = 0;
 			for(int y = 0; y < 15; y++) {
@@ -287,7 +293,7 @@ public class ScrabbleBot {
 							while((y+suffixSpace) < 15 && scrabbleBoard[x][(y+suffixSpace)].isEmpty()) {
 								suffixSpace++;
 							}
-							plays.addAll(checkPrefixSuffix(word, prefixSpace, suffixSpace, rackAL));
+							checkPrefixSuffix(word, prefixSpace, suffixSpace, scrabbleBoard, rackAL, plays, x, y - word.length());
 						}
 						word = "";
 						prefixSpace = 1;
@@ -299,7 +305,7 @@ public class ScrabbleBot {
 		/* Sweep across all rows */
 		for(int y = 0; y < 15; y++) {
 			/* Start a blank word */
-			word = "";
+			String word = "";
 			prefixSpace = 0;
 			suffixSpace = 0;
 			for(int x = 0; x < 15; x++) {
@@ -316,7 +322,7 @@ public class ScrabbleBot {
 							while((x+suffixSpace) < 15 && scrabbleBoard[x+suffixSpace][y].isEmpty()) {
 								suffixSpace++;
 							}
-							plays.addAll(checkPrefixSuffix(word, prefixSpace, suffixSpace, rackAL));
+							checkPrefixSuffix(word, prefixSpace, suffixSpace, scrabbleBoard, rackAL, plays, x - word.length(), y);
 						}
 						word = "";
 						prefixSpace = 1;
@@ -324,39 +330,67 @@ public class ScrabbleBot {
 				}
 			}
 		}
-
-		Collections.sort(plays);
-		String allPlays = "";
-		for(ScrabblePlay play : plays) {
-			allPlays += play + "\n";
-		}
-		mOutputTextPane.setText(allPlays);
-		mOutputTextPane.setCaretPosition(0);
 	}
 
-	private Collection<? extends ScrabblePlay> checkPrefixSuffix(String word, int prefixSpace,
-			int suffixSpace, ArrayList<Character> rackAL) {
-		// TODO Auto-generated method stub
-		System.out.println(prefixSpace + " " + word + " " + suffixSpace);
-		return new ArrayList<ScrabblePlay>();
+	/**
+	 * 
+	 * @param word
+	 * @param prefixSpace
+	 * @param suffixSpace
+	 * @param rackAL
+	 * @return
+	 */
+	private void checkPrefixSuffix(String word, int prefixSpace,
+			int suffixSpace, ScrabbleTile scrabbleBoard[][], ArrayList<Character> rackAL, ArrayList<ScrabblePlay> plays, int x, int y) {
 		
+		ArrayList<String> forward = fTrie.findPostfix(word, prefixSpace, rackAL);
+		scoreAllWords(forward, scrabbleBoard, rackAL, plays, x, y);
+		
+		ArrayList<String> backward = rTrie.findPostfix(reverse(word), prefixSpace, rackAL);
+		for(int i = 0; i < backward.size(); i++) {
+			backward.add(reverse(backward.remove(0)));
+		}
+		scoreAllWords(backward, scrabbleBoard, rackAL, plays, x, y);
+	}
+
+	public static String reverse(String word) {
+		int length = word.length();
+		String reverse = "";
+		for (int i = length - 1; i >= 0; i--) {
+			reverse += word.charAt(i);
+		}
+		return reverse;
 	}
 
 	/**
 	 * Given a word and an anchor tile, verify that it fits and find the highest score for the best anchor
+	 * TODO broken for prefix / suffix case
 	 * 
 	 * @param scrabbleBoard
 	 * @param word
 	 * @param x
 	 * @param y
-	 * @param isBingo 
 	 * @return
 	 */
-	private ScrabblePlay scoreWord(ScrabbleTile[][] scrabbleBoard, String word, String wildcardMask, int x,
-			int y, boolean isBingo) {
+	private ScrabblePlay scoreWord(ScrabbleTile[][] scrabbleBoard, ArrayList<Character> rackAL, String word, int x,
+			int y) {
 
 		ScrabbleTile[][] scrabbleBoardTemp = new ScrabbleTile[15][15];
-
+		
+		String wildcardMask = new String(word);
+		
+		ArrayList<Character>rackALcopy = new ArrayList<Character>(rackAL);
+		rackALcopy.add(scrabbleBoard[x][y].getLetter());
+		for(int i = 0; i < word.length(); i++) {
+			if(rackALcopy.contains(word.charAt(i))) {
+				rackALcopy.remove((Character)word.charAt(i));
+			}
+			else {
+				wildcardMask = wildcardMask.substring(0,i)+'*'+wildcardMask.substring(i+1);
+				rackALcopy.remove((Character)'*');
+			}
+		}
+		
 		/* find the letter which intersects the existing and new word */
 		char anchorChar = scrabbleBoard[x][y].getLetter();
 		ArrayList<Integer> indices = new ArrayList<Integer>();
@@ -377,7 +411,7 @@ public class ScrabbleBot {
 		int largestScore = -1;
 		int bestDirection = 0;
 		Coord horzOrigin, vertOrigin, bestOrigin = null;
-		boolean letterPlaced; /* for the wacky case where we try to lay a word and the whole thing already exists */
+		int lettersPlaced; /* for the wacky case where we try to lay a word and the whole thing already exists */
 		
 		for(int anchor : indices) {
 			int scoreHorizontal = 0, scoreVertical = 0;
@@ -386,7 +420,7 @@ public class ScrabbleBot {
 			try {
 
 				ArrayCopy2D(scrabbleBoard, scrabbleBoardTemp, 15, 15);
-				letterPlaced = false;
+				lettersPlaced = 0;
 				horzOrigin = new Coord(x - anchor, y);
 				for(int i = 0; i < word.length(); i++) {
 					if(i != anchor) {
@@ -399,7 +433,7 @@ public class ScrabbleBot {
 						}
 						else {
 							scrabbleBoardTemp[x + i - anchor][y] = new ScrabbleTile(word.charAt(i), true);
-							letterPlaced = true;
+							lettersPlaced++;
 							if(wildcardMask.charAt(i) == '*') {
 								scrabbleBoardTemp[x + i - anchor][y].setWildcard(true);
 							}
@@ -407,8 +441,8 @@ public class ScrabbleBot {
 					}
 				}
 
-				if(scoreHorizontal == 0 && letterPlaced == true) {
-					scoreHorizontal = verifyAndScore(scrabbleBoardTemp);
+				if(scoreHorizontal == 0 && lettersPlaced > 0) {
+					scoreHorizontal = verifyAndScore(scrabbleBoardTemp, lettersPlaced);
 				}
 
 				if(scoreHorizontal > largestScore) {
@@ -424,7 +458,7 @@ public class ScrabbleBot {
 			try {
 
 				ArrayCopy2D(scrabbleBoard, scrabbleBoardTemp, 15, 15);
-				letterPlaced = false;
+				lettersPlaced = 0;
 				vertOrigin = new Coord(x, y - anchor);
 				for(int i = 0; i < word.length(); i++) {
 					if(i != anchor) {
@@ -437,7 +471,7 @@ public class ScrabbleBot {
 						}
 						else {
 							scrabbleBoardTemp[x][y + i - anchor] = new ScrabbleTile(word.charAt(i), true);
-							letterPlaced = true;
+							lettersPlaced++;
 							if(wildcardMask.charAt(i) == '*') {
 								scrabbleBoardTemp[x + i - anchor][y].setWildcard(true);
 							}
@@ -445,8 +479,8 @@ public class ScrabbleBot {
 					}
 				}
 
-				if(scoreVertical == 0 && letterPlaced == true) {
-					scoreVertical = verifyAndScore(scrabbleBoardTemp);
+				if(scoreVertical == 0 && lettersPlaced > 0) {
+					scoreVertical = verifyAndScore(scrabbleBoardTemp, lettersPlaced);
 				}
 				if(scoreVertical > largestScore) {
 					bestOrigin = vertOrigin;
@@ -458,15 +492,8 @@ public class ScrabbleBot {
 				/* off the board */
 			}
 		}
-
-		/* Bingo */
-		if(largestScore >= 0 && isBingo) {
-			largestScore += 50;
-		}
+		
 		if(largestScore > 0) {
-			if(bestOrigin == null) {
-				System.out.println("fuck");
-			}
 			return new ScrabblePlay(bestOrigin, bestDirection, word, largestScore);
 		}
 		return null;
@@ -478,7 +505,7 @@ public class ScrabbleBot {
 	 * @param board
 	 * @return
 	 */
-	private int verifyAndScore(ScrabbleTile[][] board) {
+	private int verifyAndScore(ScrabbleTile[][] board, int tilesPlaced) {
 
 		int totalScore = 0;
 		int wordScore = 0;
@@ -515,7 +542,7 @@ public class ScrabbleBot {
 				if(board[x][y].isEmpty() || y == 14){
 					/* If we hit a blank space, check the word if we have one, then clear it */
 					if(word.length() > 1) {
-						if(!fTrie.isAWord(word)) {
+						if(null == fTrie.isAWord(word)) {
 							/* Word verification fail */
 							return 0;
 						}
@@ -563,7 +590,7 @@ public class ScrabbleBot {
 				if(board[x][y].isEmpty() || x == 14){
 					/* If we hit a blank space, check the word if we have one, then clear it */
 					if(word.length() > 1) {
-						if(!fTrie.isAWord(word)) {
+						if(null == fTrie.isAWord(word)) {
 							/* Word verification fail */
 							return 0;
 						}
@@ -581,6 +608,10 @@ public class ScrabbleBot {
 					wordMultiplier = 0;
 				}
 			}
+		}
+		
+		if(tilesPlaced == 7) {
+			totalScore += 50;
 		}
 		return totalScore;
 	}

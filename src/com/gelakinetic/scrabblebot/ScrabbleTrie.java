@@ -75,12 +75,15 @@ public abstract class ScrabbleTrie {
 	 * @param necessaryChar The character that must be in the formed words
 	 * @return A list of valid words that can be built with the constraints
 	 */
-	public ArrayList<String> findWords(ArrayList<Character> rack, char necessaryChar) {
-		root.clearRacksRecursive();
-		root.setRack(rack);
+	public ArrayList<String> findWords(ScrabbleTrieNode startNode, ArrayList<Character> rack, char necessaryChar) {
+		if(startNode == null) {
+			startNode = root;
+		}
+		startNode.clearRacksRecursive();
+		startNode.setRack(rack);
 
 		ArrayList<String> words = new ArrayList<String>();
-		root.findWordsRecursive(words, necessaryChar);
+		startNode.findWordsRecursive(words, necessaryChar);
 
 		return words;
 	}
@@ -89,9 +92,9 @@ public abstract class ScrabbleTrie {
 	 * Quick check to see if a word is valid
 	 * 
 	 * @param word The word to check
-	 * @return true if the word is valid, false otherwise
+	 * @return null if it isn't a word, or the final node for that word in the trie
 	 */
-	public boolean isAWord(String word) {
+	public ScrabbleTrieNode isAWord(String word) {
 		
 		ScrabbleTrieNode currentNode = root;
 		for(int i = 0; i < word.length(); i++) {
@@ -99,9 +102,17 @@ public abstract class ScrabbleTrie {
 			currentNode = currentNode.getChildNode(word.charAt(i));
 			
 			if(currentNode == null) {
-				return false;
+				return null;
 			}
 		}
-		return currentNode.IsAWord();
+		if(currentNode.IsAWord()) {
+			return currentNode;
+		}
+		return null;
+	}
+
+	public ArrayList<String> findPostfix(String word, int prefixSpace, ArrayList<Character> rackAL) {
+		ScrabbleTrieNode currentNode = isAWord(word);
+		return this.findWords(currentNode, rackAL, (char) 0);
 	}
 }

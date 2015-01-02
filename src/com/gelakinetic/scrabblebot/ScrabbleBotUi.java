@@ -298,7 +298,6 @@ public class ScrabbleBotUi {
 			e1.printStackTrace();
 		}
 		mFrame.setVisible(true);
-		System.out.println();
 
 		mFrame.setBounds(100, 100, textField.getHeight() * 16, 768);
 	}

@@ -138,14 +138,7 @@ public class ScrabbleTrieNode {
 			}
 		}
 
-		/* Reverse the string */
-		int length = word.length();
-		String reverse = "";
-		for (int i = length - 1; i >= 0; i--) {
-			reverse += word.charAt(i);
-		}
-
-		return reverse;
+		return ScrabbleBot.reverse(word);
 	}
 
 	private void removeCharFromRack(Character c) {

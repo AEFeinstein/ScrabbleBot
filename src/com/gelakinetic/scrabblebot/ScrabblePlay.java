@@ -105,7 +105,7 @@ public class ScrabblePlay implements Comparable<ScrabblePlay> {
 					(this.direction == (((ScrabblePlay)obj).direction));
 			}
 			catch(Exception e) {
-				System.out.println(e.toString());
+				e.printStackTrace();
 				return false;
 			}
 		}
