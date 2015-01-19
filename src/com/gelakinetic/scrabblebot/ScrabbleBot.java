@@ -209,7 +209,7 @@ public class ScrabbleBot {
 				ArrayList<String> choices = potentialAddons.get(scrabbleBoardTemp[addonX][addonY].getLetter());
 
 				/* For each word, see if it requires a wildcard, and replace it if necessary */
-				scoreAllWords(choices, scrabbleBoardTemp, rackAL, plays, addonX, addonY);
+				scoreAllWords(choices, scrabbleBoardTemp, rackAL, plays, addonX, addonY, 1);
 			}
 		}
 	}
@@ -241,16 +241,16 @@ public class ScrabbleBot {
 			for(int x = 0; x < 15; x++) {
 				if(!scrabbleBoard[x][y].isEmpty()) {
 					ArrayList<String> choices = potentialIntersections.get(scrabbleBoard[x][y].getLetter());
-					scoreAllWords(choices, scrabbleBoard, rackAL, plays, x, y);
+					scoreAllWords(choices, scrabbleBoard, rackAL, plays, x, y, 0);
 				}
 			}
 		}
 	}
 
-	private void scoreAllWords(ArrayList<String> choices, ScrabbleTile[][] scrabbleBoard, ArrayList<Character> rackAL, ArrayList<ScrabblePlay> plays, int x, int y) {
+	private void scoreAllWords(ArrayList<String> choices, ScrabbleTile[][] scrabbleBoard, ArrayList<Character> rackAL, ArrayList<ScrabblePlay> plays, int x, int y, int tilesAlreadyPlaced) {
 		/* For each word, see if it requires a wildcard, and replace it if necessary */
 		for(String word : choices) {
-			ScrabblePlay sp = scoreWord(scrabbleBoard, rackAL, word, x, y);
+			ScrabblePlay sp = scoreWord(scrabbleBoard, rackAL, word, x, y, tilesAlreadyPlaced);
 
 			if(sp != null && sp.score > 0) {
 				if(!plays.contains(sp)) {
@@ -344,13 +344,13 @@ public class ScrabbleBot {
 			int suffixSpace, ScrabbleTile scrabbleBoard[][], ArrayList<Character> rackAL, ArrayList<ScrabblePlay> plays, int x, int y) {
 		
 		ArrayList<String> forward = fTrie.findPostfix(word, prefixSpace, rackAL);
-		scoreAllWords(forward, scrabbleBoard, rackAL, plays, x, y);
+		scoreAllWords(forward, scrabbleBoard, rackAL, plays, x, y, 0);
 		
 		ArrayList<String> backward = rTrie.findPostfix(reverse(word), prefixSpace, rackAL);
 		for(int i = 0; i < backward.size(); i++) {
 			backward.add(reverse(backward.remove(0)));
 		}
-		scoreAllWords(backward, scrabbleBoard, rackAL, plays, x, y);
+		scoreAllWords(backward, scrabbleBoard, rackAL, plays, x, y, 0);
 	}
 
 	public static String reverse(String word) {
@@ -373,7 +373,7 @@ public class ScrabbleBot {
 	 * @return
 	 */
 	private ScrabblePlay scoreWord(ScrabbleTile[][] scrabbleBoard, ArrayList<Character> rackAL, String word, int x,
-			int y) {
+			int y, int tilesAlreadyPlaced) {
 
 		ScrabbleTile[][] scrabbleBoardTemp = new ScrabbleTile[15][15];
 		
@@ -420,7 +420,7 @@ public class ScrabbleBot {
 			try {
 
 				ArrayCopy2D(scrabbleBoard, scrabbleBoardTemp, 15, 15);
-				lettersPlaced = 0;
+				lettersPlaced = tilesAlreadyPlaced;
 				horzOrigin = new Coord(x - anchor, y);
 				for(int i = 0; i < word.length(); i++) {
 					if(i != anchor) {
@@ -441,7 +441,7 @@ public class ScrabbleBot {
 					}
 				}
 
-				if(scoreHorizontal == 0 && lettersPlaced > 0) {
+				if(scoreHorizontal == 0 && (lettersPlaced - tilesAlreadyPlaced) > 0) {
 					scoreHorizontal = verifyAndScore(scrabbleBoardTemp, lettersPlaced);
 				}
 
@@ -458,7 +458,7 @@ public class ScrabbleBot {
 			try {
 
 				ArrayCopy2D(scrabbleBoard, scrabbleBoardTemp, 15, 15);
-				lettersPlaced = 0;
+				lettersPlaced = tilesAlreadyPlaced;
 				vertOrigin = new Coord(x, y - anchor);
 				for(int i = 0; i < word.length(); i++) {
 					if(i != anchor) {
@@ -479,7 +479,7 @@ public class ScrabbleBot {
 					}
 				}
 
-				if(scoreVertical == 0 && lettersPlaced > 0) {
+				if(scoreVertical == 0 && (lettersPlaced-tilesAlreadyPlaced) > 0) {
 					scoreVertical = verifyAndScore(scrabbleBoardTemp, lettersPlaced);
 				}
 				if(scoreVertical > largestScore) {
