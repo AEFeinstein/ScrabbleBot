@@ -473,7 +473,7 @@ public class ScrabbleBot {
 							scrabbleBoardTemp[x][y + i - anchor] = new ScrabbleTile(word.charAt(i), true);
 							lettersPlaced++;
 							if(wildcardMask.charAt(i) == '*') {
-								scrabbleBoardTemp[x + i - anchor][y].setWildcard(true);
+								scrabbleBoardTemp[x][y + i - anchor].setWildcard(true);
 							}
 						}
 					}
