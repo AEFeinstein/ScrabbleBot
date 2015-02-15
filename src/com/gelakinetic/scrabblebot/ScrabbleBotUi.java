@@ -325,6 +325,9 @@ public class ScrabbleBotUi {
 						((JTextField)(mScrabblePanel.getComponent(x + y*16))).setText(tile);
 					}
 				}
+				else {
+					((JTextField)(mScrabblePanel.getComponent(x + y*16))).setText("");					
+				}
 			}
 		}
 	}
