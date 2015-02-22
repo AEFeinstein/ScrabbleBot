@@ -184,6 +184,9 @@ public class ScrabbleBot {
 					scrabbleBoardTemp[sp.origin.x][sp.origin.y] = new ScrabbleTile(sp.word.charAt(0), true);
 					addonX = sp.origin.x;
 					addonY = sp.origin.y;
+					if (!rackAL.contains(sp.word.charAt(0))) {
+						scrabbleBoardTemp[sp.origin.x][sp.origin.y].setWildcard(true);
+					}
 				}
 
 				switch(sp.direction) {
@@ -192,6 +195,9 @@ public class ScrabbleBot {
 							scrabbleBoardTemp[sp.origin.x + 1][sp.origin.y] = new ScrabbleTile(sp.word.charAt(1), true);
 							addonX = sp.origin.x + 1;
 							addonY = sp.origin.y;
+							if (!rackAL.contains(sp.word.charAt(1))) {
+								scrabbleBoardTemp[sp.origin.x + 1][sp.origin.y].setWildcard(true);
+							}
 						}
 						break;
 					}
@@ -200,6 +206,9 @@ public class ScrabbleBot {
 							scrabbleBoardTemp[sp.origin.x][sp.origin.y + 1] = new ScrabbleTile(sp.word.charAt(1), true);
 							addonX = sp.origin.x;
 							addonY = sp.origin.y + 1;
+							if (!rackAL.contains(sp.word.charAt(1))) {
+								scrabbleBoardTemp[sp.origin.x][sp.origin.y + 1].setWildcard(true);
+							}
 						}
 						break;
 					}
