@@ -121,13 +121,24 @@ public class ScrabbleBot {
 
 		ArrayList<ScrabblePlay> plays = new ArrayList<ScrabblePlay>();
 
-		findIntersectingWords(scrabbleBoard, rackAL, plays);
-		System.out.println("plays: " + plays.size());
-		findPrefixesAndSuffixes(scrabbleBoard, rackAL, plays);
-		System.out.println("plays: " + plays.size());
-		findAddonWords(scrabbleBoard, rackAL, plays);
-		System.out.println("plays: " + plays.size());
-
+		boolean newBoard = true;
+		for(int i = 0; i < scrabbleBoard.length; i++) {
+			for(int j= 0; j < scrabbleBoard.length; j++) {
+				if(!scrabbleBoard[i][j].isEmpty()) {
+					newBoard = false;
+				}
+			}			
+		}
+		
+		if(newBoard) {
+			findStartingWords(scrabbleBoard, rackAL, plays);
+		}
+		else {
+			findIntersectingWords(scrabbleBoard, rackAL, plays);
+			findPrefixesAndSuffixes(scrabbleBoard, rackAL, plays);
+			findAddonWords(scrabbleBoard, rackAL, plays);
+		}
+		
 		Collections.sort(plays);
 		String allPlays = "";
 		for(ScrabblePlay play : plays) {
@@ -135,6 +146,19 @@ public class ScrabbleBot {
 		}
 		mOutputTextPane.setText(allPlays);
 		mOutputTextPane.setCaretPosition(0);
+	}
+
+	/**
+	 * 
+	 * @param scrabbleBoard
+	 * @param rackAL
+	 * @param plays
+	 */
+	private void findStartingWords(ScrabbleTile[][] scrabbleBoard, ArrayList<Character> rackAL,
+			ArrayList<ScrabblePlay> plays) {
+		
+		ArrayList<String> words = fTrie.findWords(null, rackAL, (char)0);
+		scoreAllWords(words, scrabbleBoard, rackAL, plays, 7, 7, 0);
 	}
 
 	/**
@@ -404,16 +428,23 @@ public class ScrabbleBot {
 		char anchorChar = scrabbleBoard[x][y].getLetter();
 		ArrayList<Integer> indices = new ArrayList<Integer>();
 
-		int lastIndex = 0;
-		while(lastIndex != -1) {
-			int index = word.indexOf(anchorChar, lastIndex);
-			if(index != -1) {
-				indices.add(index);
+		if(anchorChar == 0) {
+			for(int i = 0; i < word.length(); i++) {
+				indices.add(i);
 			}
-			else {
-				break;
+		}
+		else {
+			int lastIndex = 0;
+			while(lastIndex != -1) {
+				int index = word.indexOf(anchorChar, lastIndex);
+				if(index != -1) {
+					indices.add(index);
+				}
+				else {
+					break;
+				}
+				lastIndex = index + 1;
 			}
-			lastIndex = index + 1;
 		}
 
 		/* For each anchor ScrabbleTile in the word, see if it fits, and score it */
@@ -432,9 +463,9 @@ public class ScrabbleBot {
 				lettersPlaced = tilesAlreadyPlaced;
 				horzOrigin = new Coord(x - anchor, y);
 				for(int i = 0; i < word.length(); i++) {
-					if(i != anchor) {
+//					if(i != anchor ) { // TODO
 						if(!scrabbleBoard[x + i - anchor][y].isEmpty()) {
-							/* Perhaps the tile we need for the word is alreay there? */
+							/* Perhaps the tile we need for the word is already there? */
 							if(scrabbleBoard[x + i - anchor][y].getLetter() != word.charAt(i)) {
 								scoreHorizontal = -1;
 								break;
@@ -447,7 +478,7 @@ public class ScrabbleBot {
 								scrabbleBoardTemp[x + i - anchor][y].setWildcard(true);
 							}
 						}
-					}
+//					}
 				}
 
 				if(scoreHorizontal == 0 && (lettersPlaced - tilesAlreadyPlaced) > 0) {
@@ -470,7 +501,7 @@ public class ScrabbleBot {
 				lettersPlaced = tilesAlreadyPlaced;
 				vertOrigin = new Coord(x, y - anchor);
 				for(int i = 0; i < word.length(); i++) {
-					if(i != anchor) {
+//					if(i != anchor ) { // TODO
 						if(!scrabbleBoard[x][y + i - anchor].isEmpty()) {
 							/* Perhaps the tile we need for the word is alreay there? */
 							if(scrabbleBoard[x + i - anchor][y].getLetter() != word.charAt(i)) {
@@ -485,7 +516,7 @@ public class ScrabbleBot {
 								scrabbleBoardTemp[x][y + i - anchor].setWildcard(true);
 							}
 						}
-					}
+//					}
 				}
 
 				if(scoreVertical == 0 && (lettersPlaced-tilesAlreadyPlaced) > 0) {
